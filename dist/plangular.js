@@ -480,6 +480,30 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
           });
         });
       }
+      else {
+        jQuery.each(jQuery('.song.teaser', elem), function (delta, songElement) {
+          var songUrl = jQuery(songElement).attr('data-url').trim(),
+              songArtist = jQuery(songElement).attr('data-artist').trim(),
+              songTitle = jQuery(songElement).attr('data-title').trim(),
+              songResponsibilities = jQuery('.song-responsibilities', songElement)[0].outerHTML;
+
+          resolve({ url: songUrl, client_id: client_id }, function(err, track) {
+            scope.$apply(function () {
+              track.title = songTitle;
+              track.user.username = songArtist;
+              track.responsibilities = songResponsibilities;
+              scope.tracks.push(createSrc(track));
+              songElement.remove();
+              
+              if (delta == 0) {
+                scope.track = scope.tracks[0];
+              }
+            })
+          })
+        })
+
+        jQuery(elem).addClass('plangular-loaded');
+      }
 
       scope.play = function(i) {
         if (typeof i !== 'undefined' && scope.tracks.length) {
@@ -502,8 +526,10 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
       };
 
       scope.previous = function() {
-        if (scope.tracks.length < 1) { return false }
-        if (scope.index > 0) {
+        if (scope.tracks.length < 1 || scope.index == 0) {
+          scope.play(scope.tracks.length - 1);
+        }
+        else if (scope.index > 0) {
           scope.index--;
           scope.play(scope.index);
         }
@@ -515,13 +541,19 @@ plangular.directive('plangular', ['$timeout', 'plangularConfig', function($timeo
           scope.index++;
           scope.play(scope.index);
         } else {
-          scope.pause();
+          scope.play(0);
         }
       };
 
       scope.seek = function(e) {
         if (scope.track.src === player.audio.src) {
           scope.player.seek(e);
+        }
+        else {
+          scope.play(0);
+          setTimeout(function() {
+            scope.seek(e)
+          }, 200);
         }
       };
 
@@ -558,7 +590,6 @@ plangular.provider('plangularConfig', function() {
     };
   };
 });
-
 
 module.exports = 'plangular';
 
